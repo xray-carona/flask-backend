@@ -10,6 +10,9 @@ MODEL_VERSION='v0.1'
 model = Evaluator("model/COVID-Netv1/")
 app = Flask(__name__)
 
+@app.route("/",methods=["GET"])
+def main():
+    return jsonify("Hello World")
 
 @app.route("/predict", methods=['GET'])
 def predict():
@@ -23,4 +26,4 @@ def predict():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0',debug=True)
