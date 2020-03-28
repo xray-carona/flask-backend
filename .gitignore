@@ -1,0 +1,6 @@
+/venv/*
+/model/COVID-Netv1/model.data-00000-of-00001
+/model/COVID-Netv1/model.meta
+*.pyc
+.idea/
+__pycahe__/
