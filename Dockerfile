@@ -8,6 +8,8 @@ COPY requirements.txt /
 RUN pip install -r requirements.txt
 COPY . /app
 WORKDIR /app
+ARG MODEL_CKPT
+ARG MODEL_META
 RUN wget $MODEL_CKPT
 RUN cp model.data-00000-of-00001 /app/model/COVID-Netv1/model.data-00000-of-00001
 RUN wget $MODEL_META
