@@ -24,7 +24,7 @@ def predict():
     node_env = request.headers.get('node_env')
     if node_env == 'dev':
         return jsonify({'result': 'COVID-19 Viral'})
-    if node_env == 'prod':
+    elif node_env == 'prod':
         image_loc = request.args.get('image_loc')
         img_resp = requests.get(image_loc, stream=True).raw
         image = np.asarray(bytearray(img_resp.read()), dtype="uint8")
@@ -36,7 +36,8 @@ def predict():
         # b = time.time()
         # print(b - a)
         return jsonify({'result': resp})
-
+    else:
+        return jsonify({'result':'invalid node-env'})
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=True)
