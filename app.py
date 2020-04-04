@@ -21,9 +21,7 @@ def main():
 @app.route("/predict", methods=['GET'])
 def predict():
     # a=time.time()
-    print(request.headers)
-    print(request.headers.__dict__)
-    node_env = request.headers.get('node_env')
+    node_env = request.headers.get('node-env')
     if node_env == 'dev':
         return jsonify({'result': 'COVID-19 Viral'})
     elif node_env == 'prod':
