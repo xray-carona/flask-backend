@@ -4,3 +4,4 @@
 *.pyc
 .idea/
 __pycahe__/
+*.pt
