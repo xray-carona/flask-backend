@@ -1,14 +1,9 @@
-import os
+from config import POSTGRES_HOST, POSTGRES_DB, POSTGRES_PASSWORD, POSTGRES_USER
 import psycopg2
-
-postgres_host = os.getenv('POSTGRES_HOST')
-postgres_db = os.getenv('POSTGRES_DB')
-postgres_user = os.getenv('POSTGRES_USER')
-postgres_password = os.getenv('POSTGRES_PASSWORD')
 
 
 def connect_db():
-    conn = psycopg2.connect(host=postgres_host, database=postgres_db, user=postgres_user, password=postgres_password)
+    conn = psycopg2.connect(host=POSTGRES_HOST, database=POSTGRES_DB, user=POSTGRES_USER, password=POSTGRES_PASSWORD)
     return conn
 
 
@@ -20,6 +15,7 @@ def write_output_to_db(params_dict):
     conn.commit()
     cursor.close()
     conn.close()
+
 
 def setup_db():
     conn = connect_db()
