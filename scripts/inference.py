@@ -78,7 +78,7 @@ class ChesterAiEvaluator(object):
         return exported_model
 
     def preprocess(self, img):
-        img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
+        img = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
         img = cv2.resize(img, self.INPUT_SIZE)
         mean = np.mean(img)
         std = np.std(img)

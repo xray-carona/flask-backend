@@ -40,7 +40,7 @@ def predict():
         app.logger.info(image.shape)
         covid_resp = covid_model.predict(image, sess, x, op_to_restore)
         app.logger.info(covid_resp)
-        image=chester_ai.preprocess(image)
+        # image=chester_ai.preprocess(image)
         # chester_resp=chester_ai_model.predict(image)
         chester_resp = chester_ai.predict_chest_conditions(chester_ai_model,image)
         app.logger.info(chester_resp)
