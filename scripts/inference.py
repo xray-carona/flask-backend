@@ -11,7 +11,7 @@ import os
 import tensorflow as tf
 
 
-class Evaluator(object):
+class CovidEvaluator(object):
     def __init__(self, model_dir):
         self.labels = ["Normal", "Bacterial", "Non-COVID19 Viral", "COVID-19 Viral"]
         self.INPUT_SIZE = (224, 224)
@@ -19,7 +19,8 @@ class Evaluator(object):
         self.MODEL = model_dir + "model"
 
     def load_img(self, img):
-        return img  # Keeping image in memory
+        image = cv2.imdecode(img, cv2.IMREAD_COLOR)
+        return image  # Keeping image in memory
 
     def pre_process(self, img):
         img_arr = cv2.resize(img, self.INPUT_SIZE)  # resize
@@ -63,7 +64,44 @@ class Evaluator(object):
         return self.labels[np.argmax(result_index)]
 
 
+class ChesterAiEvaluator(object):
+    def __init__(self, model_dir):
+        self.INPUT_SIZE = (224, 224)
+        self.model = model_dir + "14_label_model.h5"
+        self.labels = ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Effusion',
+                       'Emphysema', 'Fibrosis', 'Hernia', 'Infiltration', 'Mass', 'No Finding',
+                       'Nodule', 'Pleural_Thickening', 'Pneumonia', 'Pneumothorax']
+
+    def export(self):
+        exported_model = tf.keras.models.load_model(self.model)
+        print(exported_model.summary())
+        return exported_model
+
+    def preprocess(self, img):
+        img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
+        img = cv2.resize(img, self.INPUT_SIZE)
+        mean = np.mean(img)
+        std = np.std(img)
+        img = (img - mean) / std
+        img = np.expand_dims(img, axis=-1)
+        img = np.expand_dims(img, axis=0)
+        return img
+
+    def predict_chest_conditions(self, exported_model, img):
+        img = self.preprocess(img)
+        pred = exported_model.predict(img)[0]
+        pred = [i * 100 for i in pred]
+        prediction = dict(zip(self.labels, pred))
+        return prediction
+
+
 if __name__ == "__main__":
-    model = Evaluator("model/COVID-Netv1/")
-    sample_test = model.evaluate("data/test/covid-19-pneumonia-15-PA.jpg")
-    print(sample_test)
+    # model = CovidEvaluator("model/COVID-Netv1/")
+    # sample_test = model.evaluate("data/test/covid-19-pneumonia-15-PA.jpg")
+    # print(sample_test)
+    chester_model=ChesterAiEvaluator("model/ChesterAI/")
+    # model=tf.keras.models.load_model(chester_model.model)
+    # print(model.summary())
+    chester_model_d=chester_model.export()
+    pred=chester_model.predict_chest_conditions(chester_model_d,'data/test/covid-19-pneumonia-15-PA.jpg')
+    print(pred)
