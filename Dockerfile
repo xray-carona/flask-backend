@@ -13,7 +13,7 @@ ARG MODEL_CKPT
 ARG MODEL_META
 ARG MODEL_CHESTER
 RUN aws s3 cp $MODEL_CHESTER /app/model/ChesterAI/
-RUN aws s3 cp $MODEL_CPKT /app/model/COVID-Netv1/
+RUN aws s3 cp $MODEL_CKPT /app/model/COVID-Netv1/
 RUN aws s3 cp $MODEL_META /app/model/COVID-Netv1/
 #RUN wget $MODEL_CKPT
 #RUN cp model.data-00000-of-00001 /app/model/COVID-Netv1/model.data-00000-of-00001
