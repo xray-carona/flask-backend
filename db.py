@@ -24,7 +24,7 @@ def setup_db():
     id serial primary key ,
     img_url text not null ,
     model_version varchar (50) not null ,
-    model_output json not null,
+    model_output jsonb not null,
     gender varchar(10),
     age int,
     created_at timestamp default CURRENT_TIMESTAMP not null,
