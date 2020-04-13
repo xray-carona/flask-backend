@@ -7,12 +7,13 @@ from datetime import datetime
 import logging
 from db import write_output_to_db
 from aws_functions import get_xray_image
-
+import json
 MODEL_VERSION = 'v0.1'
+
 covid_model = CovidEvaluator("model/COVID-Netv1/")
-sess, x, op_to_restore = covid_model.export()
-chester_ai=ChesterAiEvaluator("model/ChesterAI/")
-chester_ai_model=chester_ai.export()
+sess_covid, x_covid, op_to_restore_covid = covid_model.export()
+chester_ai_model=ChesterAiEvaluator("model/ChesterAI/")
+sess_chester,x_chester,op_to_restore_chester=chester_ai_model.export()
 app = Flask(__name__)
 
 
@@ -38,14 +39,13 @@ def predict():
         # app.logger.info(image_np.shape)
         # image = cv2.imdecode(image_np, cv2.IMREAD_COLOR)
         app.logger.info(image.shape)
-        covid_resp = covid_model.predict(image, sess, x, op_to_restore)
+        covid_resp = covid_model.predict(image, sess_covid, x_covid, op_to_restore_covid)
         app.logger.info(covid_resp)
-        # image=chester_ai.preprocess(image)
-        # chester_resp=chester_ai_model.predict(image)
-        chester_resp = chester_ai.predict_chest_conditions(chester_ai_model,image)
+
+        chester_resp = chester_ai_model.predict(image,sess_chester,x_chester,op_to_restore_chester)
         app.logger.info(chester_resp)
-        # resp = model.evaluate(image)
-        # write_output_to_db({'img_url': image_loc, 'model_version': MODEL_VERSION, 'model_output': covid_resp})
+        write_output_to_db({'img_url': image_loc, 'model_version': MODEL_VERSION,
+                            'model_output': json.dumps({'covid': covid_resp, 'chest': chester_resp})})
         # b = time.time()
         # print(b - a)
         return jsonify({'result': {'covid':covid_resp,'chest':chester_resp}})
