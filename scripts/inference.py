@@ -8,7 +8,7 @@ import numpy as np
 # If tensorflow 1.0 is installed
 import tensorflow as tf
 from tensorflow.io import gfile
-
+from config import CHEST_CONDITION_THRESHOLD
 
 class CovidEvaluator(object):
     def __init__(self, model_dir):
@@ -147,6 +147,18 @@ class ChesterAiEvaluator(object):
         pred = [i * 100 for i in pred]
         prediction = dict(zip(self.labels, pred))
         return prediction
+
+    def modify_prediction_dict(self, prediction):
+        result = []
+        for k, v in prediction.items():
+            temp = {k: v, 'user_agree_result': None}
+            if v >= CHEST_CONDITION_THRESHOLD:
+                temp.update({'result_boolean': True})
+            elif v < CHEST_CONDITION_THRESHOLD:
+                temp.update({'result_boolean': False})
+            result.append(temp)
+        return result
+
 
 
 if __name__ == "__main__":

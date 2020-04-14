@@ -43,7 +43,10 @@ def predict():
         app.logger.info(covid_resp)
 
         chester_resp = chester_ai_model.predict(image,sess_chester,x_chester,op_to_restore_chester)
+        #Added result_boolean
+        chester_resp=chester_ai_model.modify_prediction_dict(chester_resp)
         app.logger.info(chester_resp)
+
         write_output_to_db({'img_url': image_loc, 'model_version': MODEL_VERSION,
                             'model_output': json.dumps({'covid': covid_resp, 'chest': chester_resp})})
         # b = time.time()
