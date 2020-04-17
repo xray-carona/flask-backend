@@ -13,3 +13,8 @@ def get_xray_image(url):
     response = xray.get()
     file_stream = response['Body']
     return file_stream
+
+def upload_to_s3(image):
+    upload_image=s3_bucket.Object(key='uploaded-from-app/ct-scans-output/test.jpg')
+    upload_image.put(Body=image)
+    print("Done")

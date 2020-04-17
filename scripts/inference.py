@@ -10,6 +10,7 @@ import tensorflow as tf
 from tensorflow.io import gfile
 from config import CHEST_CONDITION_THRESHOLD
 
+
 class CovidEvaluator(object):
     def __init__(self, model_dir):
         self.labels = ["Normal", "Non-COVID19 Viral", "COVID-19 Viral"]
@@ -79,7 +80,7 @@ class ChesterAiEvaluator(object):
         graph_def.ParseFromString(f.read())
         ses.graph.as_default()
         tf.import_graph_def(graph_def)
-        # print(sess.graph.get_operations())
+        # print(ses.graph.get_operations())
         tensor_output = ses.graph.get_tensor_by_name('import/dense_1/Sigmoid:0')
         tensor_input = ses.graph.get_tensor_by_name('import/conv2d_1_input:0')
         return ses,tensor_input,tensor_output
@@ -160,6 +161,58 @@ class ChesterAiEvaluator(object):
         return result
 
 
+class UNetCT:
+    def __init__(self, model_dir):
+        self.INPUT_SIZE = (512, 512)
+        self.model = model_dir + "model.h5"
+        self.model_tf=model_dir+"unetct.pb"
+        self.labels = ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Effusion',
+                       'Emphysema', 'Fibrosis', 'Hernia', 'Infiltration', 'Mass', 'No Finding',
+                       'Nodule', 'Pleural_Thickening', 'Pneumonia', 'Pneumothorax']
+        self.color_mapping = {1: [255, 0, 0], 2: [0, 255, 0], 3: [0, 0, 255]}
+
+    def export(self):
+        ses=tf.Session()
+        f=gfile.GFile(self.model_tf,'rb')
+        graph_def = tf.compat.v1.GraphDef()
+        graph_def.ParseFromString(f.read())
+        ses.graph.as_default()
+        tf.import_graph_def(graph_def)
+        tensor_input = ses.graph.get_tensor_by_name('import/input_1:0')
+        tensor_output = ses.graph.get_tensor_by_name('import/activation_22/Sigmoid:0')
+        return ses,tensor_input,tensor_output
+
+    def predict(self, img, sess, in_to_restore, op_to_restore):
+        processed_img = self.preprocess(img)
+        predictions = sess.run(op_to_restore, {in_to_restore: [processed_img]})
+        prediction = predictions[0]
+        prediction = prediction.reshape((512,512,4)).argmax(axis=2)
+        output_image=self.post_process(prediction,img)
+        return output_image
+
+    def preprocess(self, img):
+        img = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
+        img = cv2.resize(img, self.INPUT_SIZE)
+        img = np.expand_dims(img, axis=-1)
+        img = img.astype(np.float32, copy=False)
+        return img
+
+    def post_process(self,predicted,original_img):
+        result = np.zeros((512, 512, 3))
+        for i in range(511):
+            for j in range(511):
+                if predicted[i][j] != 0:
+                    result[i][j] = self.color_mapping[predicted[i][j]]
+        original_img=cv2.imdecode(original_img,cv2.IMREAD_COLOR)
+        original_img=cv2.resize(original_img,(512,512))
+        dst = cv2.addWeighted(original_img, 0.7, result, 0.3, 0, dtype=cv2.CV_8U)
+        # cv2.imshow('okay',dst)
+        # cv2.waitKey(0)
+        output_image=cv2.imencode('.jpg',dst)[1].tostring()
+        return output_image
+
+
+
 
 if __name__ == "__main__":
     # import time
@@ -169,13 +222,17 @@ if __name__ == "__main__":
     # sess, x, op_to_restore = covid_model.export()
     # covid_resp = covid_model.predict(image, sess, x, op_to_restore)
     # print(time.time()-a,covid_resp)
-    chester_model=ChesterAiEvaluator("xray_corona/flask_backend/model/ChesterAI/")
+    # chester_model=ChesterAiEvaluator("xray_corona/flask_backend/model/ChesterAI/")
     # chester_model_d=chester_model.export_keras()
     # model=tf.keras.models.load_model(chester_model.model)
     # print(model.summary())
     # pred=chester_model.evaluate(img=chester_model.preprocess(img=image))
     # pred=chester_model.predict_chest_conditions(chester_model_d,image)
     # print(pred)
-    sess,inp,outp=chester_model.export()
-    pred=chester_model.predict(image,sess,inp,outp)
-    print(pred)
+    # sess,inp,outp=chester_model.export()
+    # pred=chester_model.predict(image,sess,inp,outp)
+    # print(pred)
+    image='/home/ronald/Downloads/kjr-21-e24-g002-l-c.jpg'
+    unetModel=UNetCT("/home/ronald/xray_corona/flask_backend/model/U-Net-CT/")
+    sess,inpu,output=unetModel.export()
+    unetModel.predict(image,sess,inpu,output)
