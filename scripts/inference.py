@@ -33,6 +33,8 @@ class CovidEvaluator(object):
         saver = tf.train.import_meta_graph(self.MODEL_GRAPH)
         saver.restore(ses, self.MODEL)
         graph = tf.get_default_graph()
+        print('COVID')
+        print(graph.get_operations())
         x = graph.get_tensor_by_name("input_1:0")
         op_to_restore = graph.get_tensor_by_name("dense_3/Softmax:0")
         return ses, x, op_to_restore
@@ -80,7 +82,8 @@ class ChesterAiEvaluator(object):
         graph_def.ParseFromString(f.read())
         ses.graph.as_default()
         tf.import_graph_def(graph_def)
-        # print(ses.graph.get_operations())
+        print('ChestAi')
+        print(ses.graph.get_operations())
         tensor_output = ses.graph.get_tensor_by_name('import/dense_1/Sigmoid:0')
         tensor_input = ses.graph.get_tensor_by_name('import/conv2d_1_input:0')
         return ses,tensor_input,tensor_output
@@ -161,7 +164,7 @@ class ChesterAiEvaluator(object):
         return result
 
 
-class UNetCT:
+class UNetCTEvaluator:
     def __init__(self, model_dir):
         self.INPUT_SIZE = (512, 512)
         self.model = model_dir + "model.h5"
@@ -178,6 +181,8 @@ class UNetCT:
         graph_def.ParseFromString(f.read())
         ses.graph.as_default()
         tf.import_graph_def(graph_def)
+        print('UNet')
+        print(ses.graph.get_operations())
         tensor_input = ses.graph.get_tensor_by_name('import/input_1:0')
         tensor_output = ses.graph.get_tensor_by_name('import/activation_22/Sigmoid:0')
         return ses,tensor_input,tensor_output
@@ -233,6 +238,6 @@ if __name__ == "__main__":
     # pred=chester_model.predict(image,sess,inp,outp)
     # print(pred)
     image='/home/ronald/Downloads/kjr-21-e24-g002-l-c.jpg'
-    unetModel=UNetCT("/home/ronald/xray_corona/flask_backend/model/U-Net-CT/")
+    unetModel=UNetCTEvaluator("/home/ronald/xray_corona/flask_backend/model/U-Net-CT/")
     sess,inpu,output=unetModel.export()
     unetModel.predict(image,sess,inpu,output)

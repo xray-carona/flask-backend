@@ -2,18 +2,20 @@ from flask import Flask, request, jsonify
 import requests
 import numpy as np
 import cv2
-from scripts.inference import CovidEvaluator, ChesterAiEvaluator
+from scripts.inference import CovidEvaluator, ChesterAiEvaluator,UNetCTEvaluator
 from datetime import datetime
 import logging
 from db import write_output_to_db
-from aws_functions import get_xray_image
+from aws_functions import get_xray_image,upload_to_s3
 import json
 MODEL_VERSION = 'v0.1'
 
-covid_model = CovidEvaluator("model/COVID-Netv1/")
-sess_covid, x_covid, op_to_restore_covid = covid_model.export()
+# covid_model = CovidEvaluator("model/COVID-Netv1/")
+# sess_covid, x_covid, op_to_restore_covid = covid_model.export()
 chester_ai_model=ChesterAiEvaluator("model/ChesterAI/")
 sess_chester,x_chester,op_to_restore_chester=chester_ai_model.export()
+unet_ct_model=UNetCTEvaluator("model/U-Net-CT/")
+sess_unet,x_unet,op_to_restore_unet=unet_ct_model.export()
 app = Flask(__name__)
 
 
@@ -47,6 +49,9 @@ def predict():
         #Added result_boolean
         chester_resp=chester_ai_model.modify_prediction_dict(chester_resp)
         app.logger.info(chester_resp)
+        # unet_resp=unet_ct_model.predict(image,sess_unet,x_unet,op_to_restore_unet)
+        # upload_to_s3(unet_resp)
+
 
         write_output_to_db({'img_url': image_loc, 'model_version': MODEL_VERSION,
                             'model_output': json.dumps({'covid': covid_resp, 'chest': chester_resp}),
