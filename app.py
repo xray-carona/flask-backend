@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect
 import numpy as np
 from scripts.inference import CovidEvaluator, ChesterAiEvaluator, UNetCTEvaluator
 from datetime import datetime
@@ -19,8 +19,13 @@ sess_unet, x_unet, op_to_restore_unet = unet_ct_model.export()
 app = Flask(__name__)
 
 
+@app.route("/", methods=["GET"])
+def home():
+    return redirect("/test")
+
+
 @app.route("/test", methods=["GET"])
-def main():
+def test():
     app.logger.info("test endpoint hit")
     return jsonify({'reuslt': 'Test', 'current_time': datetime.now()})
 
@@ -36,7 +41,7 @@ def predict():
 
     elif node_env == 'prod':
         image_loc = request.args.get('image_loc')
-        model = request.args.get('model')
+        model = request.args.get('model','xray')  # So that FrontEnd doesnt break
         patient_info = request.args.get('patientInfo')
         user_id = request.args.get('user_id', 100)
         # img_resp = requests.get(image_loc, stream=True).raw
