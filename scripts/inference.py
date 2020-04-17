@@ -33,8 +33,8 @@ class CovidEvaluator(object):
         saver = tf.train.import_meta_graph(self.MODEL_GRAPH)
         saver.restore(ses, self.MODEL)
         graph = tf.get_default_graph()
-        print('COVID')
-        print(graph.get_operations())
+        # print('COVID')
+        # print(graph.get_operations())
         x = graph.get_tensor_by_name("input_1:0")
         op_to_restore = graph.get_tensor_by_name("dense_3/Softmax:0")
         return ses, x, op_to_restore
@@ -70,23 +70,23 @@ class ChesterAiEvaluator(object):
     def __init__(self, model_dir):
         self.INPUT_SIZE = (224, 224)
         self.model = model_dir + "14_label_model.h5"
-        self.model_tf=model_dir+"chester.pb"
+        self.model_tf = model_dir + "chester.pb"
         self.labels = ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Effusion',
                        'Emphysema', 'Fibrosis', 'Hernia', 'Infiltration', 'Mass', 'No Finding',
                        'Nodule', 'Pleural_Thickening', 'Pneumonia', 'Pneumothorax']
 
     def export(self):
-        ses=tf.Session()
-        f=gfile.GFile(self.model_tf,'rb')
+        ses = tf.Session()
+        f = gfile.GFile(self.model_tf, 'rb')
         graph_def = tf.compat.v1.GraphDef()
         graph_def.ParseFromString(f.read())
-        ses.graph.as_default()
-        tf.import_graph_def(graph_def)
-        print('ChestAi')
-        print(ses.graph.get_operations())
-        tensor_output = ses.graph.get_tensor_by_name('import/dense_1/Sigmoid:0')
-        tensor_input = ses.graph.get_tensor_by_name('import/conv2d_1_input:0')
-        return ses,tensor_input,tensor_output
+        # ses.graph.as_default()
+        tf.import_graph_def(graph_def, name="chester")
+        # print('ChestAi')
+        # print(ses.graph.get_operations())
+        tensor_output = ses.graph.get_tensor_by_name('chester/dense_1/Sigmoid:0')
+        tensor_input = ses.graph.get_tensor_by_name('chester/conv2d_1_input:0')
+        return ses, tensor_input, tensor_output
 
     def predict(self, img, sess, in_to_restore, op_to_restore):
         # img = self.load_img(img)
@@ -119,10 +119,10 @@ class ChesterAiEvaluator(object):
             # writer.close()
             # print all operation names
             print('\n===== ouptut operation names =====\n')
-            ops=sess.graph.get_operations()
+            ops = sess.graph.get_operations()
             print(sess.graph.get_operations())
             # for op in ops:
-                # print(op)
+            # print(op)
             # for op in sess.graph.get_operations():
             #     print(op)
             # inference by the model (op name must comes with :0 to specify the index of its output)
@@ -168,31 +168,31 @@ class UNetCTEvaluator:
     def __init__(self, model_dir):
         self.INPUT_SIZE = (512, 512)
         self.model = model_dir + "model.h5"
-        self.model_tf=model_dir+"unetct.pb"
+        self.model_tf = model_dir + "unetct.pb"
         self.labels = ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Effusion',
                        'Emphysema', 'Fibrosis', 'Hernia', 'Infiltration', 'Mass', 'No Finding',
                        'Nodule', 'Pleural_Thickening', 'Pneumonia', 'Pneumothorax']
         self.color_mapping = {1: [255, 0, 0], 2: [0, 255, 0], 3: [0, 0, 255]}
 
     def export(self):
-        ses=tf.Session()
-        f=gfile.GFile(self.model_tf,'rb')
+        ses = tf.Session()
+        f = gfile.GFile(self.model_tf, 'rb')
         graph_def = tf.compat.v1.GraphDef()
         graph_def.ParseFromString(f.read())
-        ses.graph.as_default()
-        tf.import_graph_def(graph_def)
-        print('UNet')
-        print(ses.graph.get_operations())
-        tensor_input = ses.graph.get_tensor_by_name('import/input_1:0')
-        tensor_output = ses.graph.get_tensor_by_name('import/activation_22/Sigmoid:0')
-        return ses,tensor_input,tensor_output
+        # ses.graph.as_default()
+        tf.import_graph_def(graph_def, name='unet')
+        # print('UNet')
+        # print(ses.graph.get_operations())
+        tensor_input = ses.graph.get_tensor_by_name('unet/input_1:0')
+        tensor_output = ses.graph.get_tensor_by_name('unet/activation_22/Sigmoid:0')
+        return ses, tensor_input, tensor_output
 
     def predict(self, img, sess, in_to_restore, op_to_restore):
         processed_img = self.preprocess(img)
         predictions = sess.run(op_to_restore, {in_to_restore: [processed_img]})
         prediction = predictions[0]
-        prediction = prediction.reshape((512,512,4)).argmax(axis=2)
-        output_image=self.post_process(prediction,img)
+        prediction = prediction.reshape((512, 512, 4)).argmax(axis=2)
+        output_image = self.post_process(prediction, img)
         return output_image
 
     def preprocess(self, img):
@@ -202,27 +202,25 @@ class UNetCTEvaluator:
         img = img.astype(np.float32, copy=False)
         return img
 
-    def post_process(self,predicted,original_img):
+    def post_process(self, predicted, original_img):
         result = np.zeros((512, 512, 3))
         for i in range(511):
             for j in range(511):
                 if predicted[i][j] != 0:
                     result[i][j] = self.color_mapping[predicted[i][j]]
-        original_img=cv2.imdecode(original_img,cv2.IMREAD_COLOR)
-        original_img=cv2.resize(original_img,(512,512))
+        original_img = cv2.imdecode(original_img, cv2.IMREAD_COLOR)
+        original_img = cv2.resize(original_img, (512, 512))
         dst = cv2.addWeighted(original_img, 0.7, result, 0.3, 0, dtype=cv2.CV_8U)
         # cv2.imshow('okay',dst)
         # cv2.waitKey(0)
-        output_image=cv2.imencode('.jpg',dst)[1].tostring()
+        output_image = cv2.imencode('.jpg', dst)[1].tostring()
         return output_image
-
-
 
 
 if __name__ == "__main__":
     # import time
     # a=time.time()
-    image='flask_backend/data/test/covid-19-pneumonia-15-PA.jpg'
+    image = 'flask_backend/data/test/covid-19-pneumonia-15-PA.jpg'
     # covid_model = CovidEvaluator("/home/ronald/xray_corona/flask_backend/model/COVID-Netv1/")
     # sess, x, op_to_restore = covid_model.export()
     # covid_resp = covid_model.predict(image, sess, x, op_to_restore)
@@ -237,7 +235,7 @@ if __name__ == "__main__":
     # sess,inp,outp=chester_model.export()
     # pred=chester_model.predict(image,sess,inp,outp)
     # print(pred)
-    image='/home/ronald/Downloads/kjr-21-e24-g002-l-c.jpg'
-    unetModel=UNetCTEvaluator("/home/ronald/xray_corona/flask_backend/model/U-Net-CT/")
-    sess,inpu,output=unetModel.export()
-    unetModel.predict(image,sess,inpu,output)
+    image = '/home/ronald/Downloads/kjr-21-e24-g002-l-c.jpg'
+    unetModel = UNetCTEvaluator("/home/ronald/xray_corona/flask_backend/model/U-Net-CT/")
+    sess, inpu, output = unetModel.export()
+    unetModel.predict(image, sess, inpu, output)
