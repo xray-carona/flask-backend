@@ -33,6 +33,7 @@ def predict():
     elif node_env == 'prod':
         image_loc = request.args.get('image_loc')
         model = request.args.get('model')
+        patient_info = request.args.get('patientInfo')
         # img_resp = requests.get(image_loc, stream=True).raw
         img_resp = get_xray_image(image_loc)
         image = np.asarray(bytearray(img_resp.read()), dtype="uint8")
@@ -48,7 +49,8 @@ def predict():
         app.logger.info(chester_resp)
 
         write_output_to_db({'img_url': image_loc, 'model_version': MODEL_VERSION,
-                            'model_output': json.dumps({'covid': covid_resp, 'chest': chester_resp})})
+                            'model_output': json.dumps({'covid': covid_resp, 'chest': chester_resp}),
+                            'patient_info': json.dumps(patient_info)})
         # b = time.time()
         # print(b - a)
         return jsonify({'result': {'covid':covid_resp,'chest':chester_resp}})

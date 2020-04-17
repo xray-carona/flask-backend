@@ -9,8 +9,8 @@ def connect_db():
 def write_output_to_db(params_dict):
     conn = connect_db()
     cursor = conn.cursor()
-    query = """INSERT INTO xray_results(img_url,model_version,model_output)
-     VALUES (%(img_url)s,%(model_version)s,%(model_output)s)"""
+    query = """INSERT INTO xray_results(img_url,model_version,model_output,patient_info)
+     VALUES (%(img_url)s,%(model_version)s,%(model_output)s,%(patient_info)s)"""
     cursor.execute(query, params_dict)
     conn.commit()
     cursor.close()
