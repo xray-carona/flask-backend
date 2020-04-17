@@ -50,7 +50,7 @@ def predict():
 
         write_output_to_db({'img_url': image_loc, 'model_version': MODEL_VERSION,
                             'model_output': json.dumps({'covid': covid_resp, 'chest': chester_resp}),
-                            'patient_info': json.dumps(patient_info)})
+                            'patient_info': patient_info})
         # b = time.time()
         # print(b - a)
         return jsonify({'result': {'covid':covid_resp,'chest':chester_resp}})
