@@ -8,7 +8,18 @@ import numpy as np
 # If tensorflow 1.0 is installed
 import tensorflow as tf
 from tensorflow.io import gfile
-from config import CHEST_CONDITION_THRESHOLD,CHEST_CONDITION_NO_FINDINGS
+from config import CHEST_CONDITION_THRESHOLD, CHEST_CONDITION_NO_FINDINGS
+
+
+def image_hash(image, hashSize=8):
+    #  dhash pyimagesearch
+    image = cv2.imdecode(image, cv2.IMREAD_GRAYSCALE)
+    resized = cv2.resize(image, (hashSize + 1, hashSize))
+    # compute the (relative) horizontal gradient between adjacent
+    # column pixels
+    diff = resized[:, 1:] > resized[:, :-1]
+    # convert the difference image to a hash
+    return sum([2 ** i for (i, v) in enumerate(diff.flatten()) if v])
 
 
 class CovidEvaluator(object):
@@ -234,7 +245,7 @@ if __name__ == "__main__":
     # sess, x, op_to_restore = covid_model.export()
     # covid_resp = covid_model.predict(image, sess, x, op_to_restore)
     # print(time.time()-a,covid_resp)
-    chester_model=ChesterAiEvaluator("/home/ronald/xray_corona/flask_backend/model/ChesterAI/")
+    chester_model = ChesterAiEvaluator("/home/ronald/xray_corona/flask_backend/model/ChesterAI/")
     # chester_model_d=chester_model.export_keras()
     # model=tf.keras.models.load_model(chester_model.model)
     # print(model.summary())

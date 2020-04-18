@@ -1,13 +1,13 @@
 from flask import Flask, request, jsonify, redirect
 import numpy as np
-from scripts.inference import CovidEvaluator, ChesterAiEvaluator, UNetCTEvaluator
+from scripts.inference import CovidEvaluator, ChesterAiEvaluator, UNetCTEvaluator, image_hash
 from datetime import datetime
 import logging
-from db import write_output_to_db
+from db import write_output_to_db, get_model_output
 from aws_functions import get_xray_image, upload_to_s3
 import json
 import uuid
-from scripts.validation import ChestCTValidator,ChestXRayValidator
+from scripts.validation import ChestCTValidator, ChestXRayValidator
 
 MODEL_VERSION = 'v0.1'
 #  COVID_MODEL
@@ -24,13 +24,11 @@ app = Flask(__name__)
 
 @app.route("/", methods=["GET"])
 def home():
-
     return redirect("/test")
 
 
 @app.route("/test", methods=["GET"])
 def test():
-
     app.logger.info("test endpoint hit")
 
     return jsonify({'reuslt': 'Test', 'current_time': datetime.now()})
@@ -38,7 +36,6 @@ def test():
 
 @app.route("/predict", methods=['GET'])
 def predict():
-
     app.logger.info("predict endpoint hit")
     node_env = request.headers.get('node-env')
 
@@ -49,18 +46,22 @@ def predict():
     elif node_env == 'prod':
 
         image_loc = request.args.get('image_loc')
-        model = request.args.get('model_type','xray')  # So that FrontEnd doesnt break
-        override_validation = request.args.get('override_validation',None)
+        model_tpye = request.args.get('model_type', 'xray')  # So that FrontEnd doesnt break
+        override_validation = request.args.get('override_validation', None)
         patient_info = request.args.get('patientInfo')
-        user_id = request.args.get('user_id', 100)
+        user_id = request.args.get('user_id', 100)  # user_id is a int, but currently fe is sending str
         # img_resp = requests.get(image_loc, stream=True).raw
         img_resp = get_xray_image(image_loc)
         image = np.asarray(bytearray(img_resp.read()), dtype="uint8")
         app.logger.info(image.shape)
+        imghash = image_hash(image)
+        model_output = get_model_output({"image_hash": str(imghash), "model_version": f"{model_tpye}_{MODEL_VERSION}"})
+        if model_output:
+            app.logger.info(model_output)
+            return jsonify({'result': model_output, 'duplicate_image': True, 'image_hash': imghash})
+        if model_tpye == 'xray':
 
-        if model == 'xray':
-
-            if not override_validation or override_validation.lower()!='true':
+            if not override_validation or override_validation.lower() != 'true':
                 image_validator = ChestXRayValidator(image)
                 valid_image = image_validator.validate()
 
@@ -75,11 +76,11 @@ def predict():
             app.logger.info(chester_resp)
             write_output_to_db({'img_url': image_loc, 'model_version': 'xray_' + MODEL_VERSION,
                                 'model_output': json.dumps({'covid': covid_resp, 'chest': chester_resp}),
-                                'patient_info': patient_info, 'user_id': user_id})
+                                'patient_info': patient_info, 'user_id': user_id, 'input_image_hash': imghash})
 
             return jsonify({'result': {'covid': covid_resp, 'chest': chester_resp}})
 
-        if model == 'ct':
+        if model_tpye == 'ct':
 
             if not override_validation or override_validation.lower() != 'true':
                 image_validator = ChestCTValidator(image)
@@ -93,7 +94,7 @@ def predict():
             image_url = upload_to_s3(unet_resp, filename)
             write_output_to_db({'img_url': image_loc, 'model_version': 'ct_' + MODEL_VERSION,
                                 'model_output': json.dumps({'image_url': image_url}),
-                                'patient_info': patient_info, 'user_id': user_id})
+                                'patient_info': patient_info, 'user_id': user_id, 'input_image_hash': imghash})
 
             return jsonify({'result': {'image_url': image_url}})
 
