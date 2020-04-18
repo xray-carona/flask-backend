@@ -8,7 +8,7 @@ import numpy as np
 # If tensorflow 1.0 is installed
 import tensorflow as tf
 from tensorflow.io import gfile
-from config import CHEST_CONDITION_THRESHOLD
+from config import CHEST_CONDITION_THRESHOLD,CHEST_CONDITION_NO_FINDINGS
 
 
 class CovidEvaluator(object):
@@ -136,7 +136,7 @@ class ChesterAiEvaluator(object):
             print(prediction)
 
     def preprocess(self, img):
-        img = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
+        img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
         img = cv2.resize(img, self.INPUT_SIZE)
         mean = np.mean(img)
         std = np.std(img)
@@ -154,12 +154,21 @@ class ChesterAiEvaluator(object):
 
     def modify_prediction_dict(self, prediction):
         result = []
+        nofindings_bool = True if prediction['No Finding'] >= CHEST_CONDITION_NO_FINDINGS else False
         for k, v in prediction.items():
             temp = {k: v, 'user_agree_result': None}
-            if v >= CHEST_CONDITION_THRESHOLD:
-                temp.update({'result_boolean': True})
-            elif v < CHEST_CONDITION_THRESHOLD:
-                temp.update({'result_boolean': False})
+            if nofindings_bool:
+                if k == 'No Finding':
+                    temp.update({'result_boolean': nofindings_bool})
+                else:
+                    temp.update({'result_boolean': False})
+            elif not nofindings_bool:
+                if k == 'No Finding':
+                    temp.update({'result_boolean': nofindings_bool})
+                elif v >= CHEST_CONDITION_THRESHOLD:
+                    temp.update({'result_boolean': True})
+                elif v < CHEST_CONDITION_THRESHOLD:
+                    temp.update({'result_boolean': False})
             result.append(temp)
         return result
 
@@ -220,12 +229,12 @@ class UNetCTEvaluator:
 if __name__ == "__main__":
     # import time
     # a=time.time()
-    image = 'flask_backend/data/test/covid-19-pneumonia-15-PA.jpg'
+    image = '/home/ronald/xray_corona/flask_backend/data/test/covid-19-pneumonia-15-PA.jpg'
     # covid_model = CovidEvaluator("/home/ronald/xray_corona/flask_backend/model/COVID-Netv1/")
     # sess, x, op_to_restore = covid_model.export()
     # covid_resp = covid_model.predict(image, sess, x, op_to_restore)
     # print(time.time()-a,covid_resp)
-    # chester_model=ChesterAiEvaluator("xray_corona/flask_backend/model/ChesterAI/")
+    chester_model=ChesterAiEvaluator("/home/ronald/xray_corona/flask_backend/model/ChesterAI/")
     # chester_model_d=chester_model.export_keras()
     # model=tf.keras.models.load_model(chester_model.model)
     # print(model.summary())
@@ -234,8 +243,16 @@ if __name__ == "__main__":
     # print(pred)
     # sess,inp,outp=chester_model.export()
     # pred=chester_model.predict(image,sess,inp,outp)
-    # print(pred)
-    image = '/home/ronald/Downloads/kjr-21-e24-g002-l-c.jpg'
-    unetModel = UNetCTEvaluator("/home/ronald/xray_corona/flask_backend/model/U-Net-CT/")
-    sess, inpu, output = unetModel.export()
-    unetModel.predict(image, sess, inpu, output)
+    # pred = {'Atelectasis': 0.4010319709777832, 'Cardiomegaly': 16.25364124774933, 'Consolidation': 2.338424324989319,
+    #         'Edema': 0.00020563602447509766, 'Effusion': 2.881249785423279, 'Emphysema': 3.8743019104003906e-05,
+    #         'Fibrosis': 0.0001817941665649414, 'Hernia': 0.0008046627044677734, 'Infiltration': 5.490788444876671,
+    #         'Mass': 42.957788705825806, 'No Finding': 65.832532048225403, 'Nodule': 10.899960994720459,
+    #         'Pleural_Thickening': 0.053374317940324545, 'Pneumonia': 66.225700303912163,
+    #         'Pneumothorax': 70.27559681329876184}
+    # # print(pred)
+    # predictions =chester_model.modify_prediction_dict(pred)
+    # print(predictions)
+    # image = '/home/ronald/Downloads/kjr-21-e24-g002-l-c.jpg'
+    # unetModel = UNetCTEvaluator("/home/ronald/xray_corona/flask_backend/model/U-Net-CT/")
+    # sess, inpu, output = unetModel.export()
+    # unetModel.predict(image, sess, inpu, output)

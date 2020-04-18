@@ -41,7 +41,7 @@ def predict():
 
     elif node_env == 'prod':
         image_loc = request.args.get('image_loc')
-        model = request.args.get('model','xray')  # So that FrontEnd doesnt break
+        model = request.args.get('model_type','xray')  # So that FrontEnd doesnt break
         patient_info = request.args.get('patientInfo')
         user_id = request.args.get('user_id', 100)
         # img_resp = requests.get(image_loc, stream=True).raw
@@ -62,6 +62,7 @@ def predict():
             write_output_to_db({'img_url': image_loc, 'model_version': 'xray_' + MODEL_VERSION,
                                 'model_output': json.dumps({'covid': covid_resp, 'chest': chester_resp}),
                                 'patient_info': patient_info, 'user_id': user_id})
+
             return jsonify({'result': {'covid': covid_resp, 'chest': chester_resp}})
 
         if model == 'ct':
