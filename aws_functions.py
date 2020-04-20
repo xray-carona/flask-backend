@@ -21,7 +21,7 @@ def return_s3_url_image(filename,folder):
 
 def upload_to_s3(image, file_name):
     upload_image = s3_bucket.Object(key=f"{AWS_CT_FOLDER}{file_name}.jpg")
-    upload_image.put(Body=image)
+    upload_image.put(Body=image,ACL='public-read')
     return return_s3_url_image(file_name,AWS_CT_FOLDER)
 
 
