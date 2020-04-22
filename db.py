@@ -30,6 +30,15 @@ def get_model_output(params_dict):
     conn.close()
     return result
 
+def get_userId_from_email(params_dict):
+    conn =connect_db()
+    cursor = conn.cursor()
+    query="SELECT user_id FROM users WHERE email=%(email)s and verified!=0"
+    cursor.execute(query,params_dict)
+    result=cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return result
 
 def setup_db():
     conn = connect_db()

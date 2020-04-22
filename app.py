@@ -55,10 +55,10 @@ def predict():
         image = np.asarray(bytearray(img_resp.read()), dtype="uint8")
         app.logger.info(image.shape)
         imghash = image_hash(image)
-        model_output = get_model_output({"image_hash": str(imghash), "model_version": f"{model_tpye}_{MODEL_VERSION}"})
-        if model_output:
-            app.logger.info(model_output)
-            return jsonify({'result': model_output, 'duplicate_image': True, 'image_hash': imghash})
+        # model_output = get_model_output({"image_hash": str(imghash), "model_version": f"{model_tpye}_{MODEL_VERSION}"})
+        # if model_output:
+        #     app.logger.info(model_output)
+        #     return jsonify({'result': model_output, 'duplicate_image': True, 'image_hash': imghash})
         if model_tpye == 'xray':
 
             if not override_validation or override_validation.lower() != 'true':
@@ -89,14 +89,14 @@ def predict():
                 if not valid_image['result']:
                     return jsonify({'error': True, 'errorMessage': valid_image['message']})
 
-            unet_resp = unet_ct_model.predict(image, sess_unet, x_unet, op_to_restore_unet)
+            unet_resp, unet_dict = unet_ct_model.predict(image, sess_unet, x_unet, op_to_restore_unet)
             filename = f"{user_id}_{uuid.uuid4()}"
             image_url = upload_to_s3(unet_resp, filename)
             write_output_to_db({'img_url': image_loc, 'model_version': 'ct_' + MODEL_VERSION,
-                                'model_output': json.dumps({'image_url': image_url}),
+                                'model_output': json.dumps({'image_url': image_url, 'output_dict': unet_dict}),
                                 'patient_info': patient_info, 'user_id': user_id, 'input_image_hash': imghash})
 
-            return jsonify({'result': {'image_url': image_url}})
+            return jsonify({'result': {'image_url': image_url, 'output_dict': unet_dict}})
 
     else:
 

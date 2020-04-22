@@ -189,10 +189,8 @@ class UNetCTEvaluator:
         self.INPUT_SIZE = (512, 512)
         self.model = model_dir + "model.h5"
         self.model_tf = model_dir + "unetct.pb"
-        self.labels = ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Effusion',
-                       'Emphysema', 'Fibrosis', 'Hernia', 'Infiltration', 'Mass', 'No Finding',
-                       'Nodule', 'Pleural_Thickening', 'Pneumonia', 'Pneumothorax']
         self.color_mapping = {1: [255, 0, 0], 2: [0, 255, 0], 3: [0, 0, 255]}
+        self.labels = {1: 'Ground Glass', 2: 'Consolidations', 3: 'Pleural effusion'}
 
     def export(self):
         ses = tf.Session()
@@ -212,8 +210,8 @@ class UNetCTEvaluator:
         predictions = sess.run(op_to_restore, {in_to_restore: [processed_img]})
         prediction = predictions[0]
         prediction = prediction.reshape((512, 512, 4)).argmax(axis=2)
-        output_image = self.post_process(prediction, img)
-        return output_image
+        output_image, output_dict = self.post_process(prediction, img)
+        return output_image, output_dict
 
     def preprocess(self, img):
         img = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
@@ -223,18 +221,25 @@ class UNetCTEvaluator:
         return img
 
     def post_process(self, predicted, original_img):
+        count = {1: 0, 2: 0, 3: 0}  # To get Area
         result = np.zeros((512, 512, 3))
-        for i in range(511):
-            for j in range(511):
+        for i in range(self.INPUT_SIZE[0]):
+            for j in range(self.INPUT_SIZE[1]):
                 if predicted[i][j] != 0:
                     result[i][j] = self.color_mapping[predicted[i][j]]
+                    count[predicted[i][j]] += 1
         original_img = cv2.imdecode(original_img, cv2.IMREAD_COLOR)
         original_img = cv2.resize(original_img, (512, 512))
         dst = cv2.addWeighted(original_img, 0.7, result, 0.3, 0, dtype=cv2.CV_8U)
         # cv2.imshow('okay',dst)
         # cv2.waitKey(0)
+        # area_percentage = {k: 100 * v / 512.0 for k, v in count.items()}
+        # TODO , instead of taking full image, find only inside lung cavity
+        detailed_dict = [
+            {'color': self.color_mapping[k], 'area_percentage': round(100 * count[k] / (512.0 * 512), 3),
+             'legend': self.labels[k], 'count': count[k], 'key': k} for k in count]
         output_image = cv2.imencode('.jpg', dst)[1].tostring()
-        return output_image
+        return output_image, detailed_dict
 
 
 if __name__ == "__main__":
