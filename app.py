@@ -3,7 +3,7 @@ import numpy as np
 from scripts.inference import CovidEvaluator, ChesterAiEvaluator, UNetCTEvaluator, image_hash
 from datetime import datetime
 import logging
-from db import write_output_to_db, get_model_output
+from db import write_output_to_db, get_model_output, check_if_user_id
 from aws_functions import get_xray_image, upload_to_s3
 import json
 import uuid
@@ -49,16 +49,18 @@ def predict():
         model_tpye = request.args.get('model_type', 'xray')  # So that FrontEnd doesnt break
         override_validation = request.args.get('override_validation', None)
         patient_info = request.args.get('patientInfo')
-        user_id = request.args.get('user_id', 100)  # user_id is a int, but currently fe is sending str
+        user_id = request.args.get('user_id')  # user_id is a int, but currently fe is sending str
+        user_id = check_if_user_id(user_id)
+
         # img_resp = requests.get(image_loc, stream=True).raw
         img_resp = get_xray_image(image_loc)
         image = np.asarray(bytearray(img_resp.read()), dtype="uint8")
         app.logger.info(image.shape)
         imghash = image_hash(image)
-        # model_output = get_model_output({"image_hash": str(imghash), "model_version": f"{model_tpye}_{MODEL_VERSION}"})
-        # if model_output:
-        #     app.logger.info(model_output)
-        #     return jsonify({'result': model_output, 'duplicate_image': True, 'image_hash': imghash})
+        model_output = get_model_output({"image_hash": str(imghash), "model_version": f"{model_tpye}_{MODEL_VERSION}"})
+        if model_output:
+            app.logger.info(model_output)
+            return jsonify({'result': model_output, 'duplicate_image': True, 'image_hash': imghash})
         if model_tpye == 'xray':
 
             if not override_validation or override_validation.lower() != 'true':

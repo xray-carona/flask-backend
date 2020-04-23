@@ -30,15 +30,17 @@ def get_model_output(params_dict):
     conn.close()
     return result
 
+
 def get_userId_from_email(params_dict):
-    conn =connect_db()
+    conn = connect_db()
     cursor = conn.cursor()
-    query="SELECT user_id FROM users WHERE email=%(email)s and verified!=0"
-    cursor.execute(query,params_dict)
-    result=cursor.fetchone()
+    query = "SELECT user_id FROM users WHERE email=%(email)s"  # Switch to verification in api level
+    cursor.execute(query, params_dict)
+    result = cursor.fetchone()
     cursor.close()
     conn.close()
-    return result
+    return result[0]
+
 
 def setup_db():
     conn = connect_db()
@@ -59,6 +61,13 @@ def setup_db():
     cursor.close()
     conn.close()
 
+def check_if_user_id(id):
+    try:
+        user_id=int(id)
+    except ValueError:
+        user_id=get_userId_from_email({'email':id})
+    finally:
+        return user_id
 
 if __name__ == '__main__':
     setup_db()
