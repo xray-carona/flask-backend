@@ -20,7 +20,17 @@ sess_chester, x_chester, op_to_restore_chester = chester_ai_model.export()
 unet_ct_model = UNetCTEvaluator("model/U-Net-CT/")
 sess_unet, x_unet, op_to_restore_unet = unet_ct_model.export()
 app = Flask(__name__)
+gunicorn_logger = logging.getLogger("gunicorn.error")
+app.logger.handlers = gunicorn_logger.handlers
+#app.logger.setLevel(gunicorn_logger.level)
+app.logger.setLevel(logging.DEBUG)
 
+@app.after_request
+def after(response):
+    app.logger.debug("After Request")
+    app.logger.debug(response.status)
+    app.logger.debug(response.get_data())
+    return response
 
 @app.route("/", methods=["GET"])
 def home():
@@ -46,7 +56,7 @@ def predict():
     elif node_env == 'prod':
 
         image_loc = request.args.get('image_loc')
-        model_tpye = request.args.get('model_type', 'xray')  # So that FrontEnd doesnt break
+        model_type = request.args.get('model_type', 'xray')  # So that FrontEnd doesnt break
         override_validation = request.args.get('override_validation', None)
         patient_info = request.args.get('patientInfo')
         user_id = request.args.get('userId')  # user_id is a int, but currently fe is sending str
@@ -57,12 +67,12 @@ def predict():
         image = np.asarray(bytearray(img_resp.read()), dtype="uint8")
         app.logger.info(image.shape)
         imghash = image_hash(image)
-        model_output = get_model_output({"image_hash": str(imghash), "model_version": f"{model_tpye}_{MODEL_VERSION}"})
+        model_output = get_model_output({"image_hash": str(imghash), "model_version": f"{model_type}_{MODEL_VERSION}"})
         if model_output:
             app.logger.info(model_output)
             return jsonify({'result': model_output, 'duplicate_image': True, 'image_hash': imghash})
-        if model_tpye == 'xray':
-
+        if model_type == 'xray':
+            app.logger.info('XRAY prediction')
             if not override_validation or override_validation.lower() != 'true':
                 image_validator = ChestXRayValidator(image)
                 valid_image = image_validator.validate()
@@ -82,8 +92,8 @@ def predict():
 
             return jsonify({'result': {'covid': covid_resp, 'chest': chester_resp}})
 
-        if model_tpye == 'ct':
-
+        if model_type == 'ct':
+            app.logger.info('CT SCAN prediction')
             if not override_validation or override_validation.lower() != 'true':
                 image_validator = ChestCTValidator(image)
                 valid_image = image_validator.validate()
@@ -94,6 +104,7 @@ def predict():
             unet_resp, unet_dict = unet_ct_model.predict(image, sess_unet, x_unet, op_to_restore_unet)
             filename = f"{user_id}_{uuid.uuid4()}"
             image_url = upload_to_s3(unet_resp, filename)
+            app.logger.info(image_url)
             write_output_to_db({'img_url': image_loc, 'model_version': 'ct_' + MODEL_VERSION,
                                 'model_output': json.dumps({'image_url': image_url, 'output_dict': unet_dict}),
                                 'patient_info': patient_info, 'user_id': user_id, 'input_image_hash': imghash})
