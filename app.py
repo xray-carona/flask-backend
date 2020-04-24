@@ -49,7 +49,7 @@ def predict():
         model_tpye = request.args.get('model_type', 'xray')  # So that FrontEnd doesnt break
         override_validation = request.args.get('override_validation', None)
         patient_info = request.args.get('patientInfo')
-        user_id = request.args.get('user_id')  # user_id is a int, but currently fe is sending str
+        user_id = request.args.get('userId')  # user_id is a int, but currently fe is sending str
         user_id = check_if_user_id(user_id)
 
         # img_resp = requests.get(image_loc, stream=True).raw
