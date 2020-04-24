@@ -90,7 +90,7 @@ def predict():
                                 'model_output': json.dumps({'covid': covid_resp, 'chest': chester_resp}),
                                 'patient_info': patient_info, 'user_id': user_id, 'input_image_hash': imghash})
 
-            return jsonify({'result': {'covid': covid_resp, 'chest': chester_resp}})
+            return jsonify({'result': [{'covid': covid_resp, 'chest': chester_resp}]})
 
         if model_type == 'ct':
             app.logger.info('CT SCAN prediction')
@@ -109,7 +109,7 @@ def predict():
                                 'model_output': json.dumps({'image_url': image_url, 'output_dict': unet_dict}),
                                 'patient_info': patient_info, 'user_id': user_id, 'input_image_hash': imghash})
 
-            return jsonify({'result': {'image_url': image_url, 'output_dict': unet_dict}})
+            return jsonify({'result': [{'image_url': image_url, 'output_dict': unet_dict}]})
 
     else:
 
