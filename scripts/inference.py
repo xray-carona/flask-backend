@@ -236,7 +236,7 @@ class UNetCTEvaluator:
         # area_percentage = {k: 100 * v / 512.0 for k, v in count.items()}
         # TODO , instead of taking full image, find only inside lung cavity
         detailed_dict = [
-            {'color': self.color_mapping[k], 'area_percentage': round(100 * count[k] / (512.0 * 512), 3),
+            {'color': list(reversed(self.color_mapping[k])), 'area_percentage': round(100 * count[k] / (512.0 * 512), 3),
              'legend': self.labels[k], 'count': count[k], 'key': k} for k in count]
         output_image = cv2.imencode('.jpg', dst)[1].tostring()
         return output_image, detailed_dict
