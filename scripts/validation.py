@@ -12,11 +12,13 @@ class BasicValidator:
     def _file_type_validation(self):
         file_type = magic.from_buffer(self.image_loc, mime=True)
         file_types = file_type.split('/')
+        if file_types[0]=='application' and file_types[1]=="dicom":
+            return {'result': True,'image_type':file_types[1]}
         if file_types[0] != 'image':
             return {'result': False, 'reason': 'Invalid file type,please upload an image'}
         if file_types[1] not in self.allowed_file_types:
             return {'result': False, 'reason': f'Please upload {self.allowed_file_types} only'}
-        return {'result': True}
+        return {'result': True,'image_type':file_types[1]}
 
     def _ssim(self, gturth_image, image_size):
         #  Compares Strucutral similartiy
@@ -40,6 +42,19 @@ class BasicValidator:
 
     def basic_validate(self):
         return self._file_type_validation()
+
+    @classmethod
+    def get_file_type(cls,file):
+        file_type = magic.from_buffer(file, mime=True)
+        file_types = file_type.split('/')
+        if file_types[0] == 'application' and file_types[1] == "dicom":
+            return {'result': True, 'image_type': file_types[1]}
+        if file_types[0] != 'image':
+            return {'result': False, 'reason': 'Invalid file type,please upload an image'}
+        if file_types[1] not in cls.allowed_file_types:
+            return {'result': False, 'reason': f'Please upload {cls.allowed_file_types} only'}
+        return {'result': True, 'image_type': file_types[1]}
+
 
 
 class ChestCTValidator(BasicValidator):

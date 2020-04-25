@@ -7,7 +7,7 @@ from db import write_output_to_db, get_model_output, check_if_user_id
 from aws_functions import get_xray_image, upload_to_s3
 import json
 import uuid
-from scripts.validation import ChestCTValidator, ChestXRayValidator
+from scripts.validation import ChestCTValidator, ChestXRayValidator, BasicValidator
 
 MODEL_VERSION = 'v0.1'
 #  COVID_MODEL
@@ -64,13 +64,19 @@ def predict():
 
         # img_resp = requests.get(image_loc, stream=True).raw
         img_resp = get_xray_image(image_loc)
-        image = np.asarray(bytearray(img_resp.read()), dtype="uint8")
-        app.logger.info(image.shape)
-        imghash = image_hash(image)
-        model_output = get_model_output({"image_hash": str(imghash), "model_version": f"{model_type}_{MODEL_VERSION}"})
-        if model_output:
-            app.logger.info(model_output)
-            return jsonify({'result': model_output, 'duplicate_image': True, 'image_hash': imghash})
+        allowed_image_type = BasicValidator.get_file_type(img_resp.read())
+        if not allowed_image_type['result']:
+            return jsonify({'error':True,'errorMessage':allowed_image_type['reason']})
+        if allowed_image_type['result'] and allowed_image_type['image_type']!='dicom':
+            image = np.asarray(bytearray(img_resp.read()), dtype="uint8")
+            app.logger.info(image.shape)
+        if allowed_image_type['result'] and allowed_image_type['image_type']=='dicom':
+            print('DICOM file')
+        # imghash = image_hash(image)
+        # model_output = get_model_output({"image_hash": str(imghash), "model_version": f"{model_type}_{MODEL_VERSION}"})
+        # if model_output:
+        #     app.logger.info(model_output)
+        #     return jsonify({'result': model_output, 'duplicate_image': True, 'image_hash': imghash})
         if model_type == 'xray':
             app.logger.info('XRAY prediction')
             if not override_validation or override_validation.lower() != 'true':
