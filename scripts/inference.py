@@ -214,22 +214,23 @@ class UNetCTEvaluator:
         return output_image, output_dict
 
     def preprocess(self, img):
-        img = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
-        img = cv2.resize(img, self.INPUT_SIZE)
+        # img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
+        img = cv2.resize(img, self.INPUT_SIZE,interpolation=cv2.INTER_NEAREST)
         img = np.expand_dims(img, axis=-1)
         img = img.astype(np.float32, copy=False)
         return img
 
     def post_process(self, predicted, original_img):
         count = {1: 0, 2: 0, 3: 0}  # To get Area
-        result = np.zeros((512, 512, 3))
+        result = np.zeros((512, 512,3))
         for i in range(self.INPUT_SIZE[0]):
             for j in range(self.INPUT_SIZE[1]):
                 if predicted[i][j] != 0:
                     result[i][j] = self.color_mapping[predicted[i][j]]
                     count[predicted[i][j]] += 1
-        original_img = cv2.imdecode(original_img, cv2.IMREAD_COLOR)
-        original_img = cv2.resize(original_img, (512, 512))
+        # original_img = cv2.imdecode(original_img, cv2.IMREAD_COLOR)
+        original_img = cv2.resize(original_img, (512, 512),interpolation=cv2.INTER_NEAREST)
+        original_img= cv2.cvtColor(original_img,cv2.COLOR_GRAY2BGR)
         dst = cv2.addWeighted(original_img, 0.7, result, 0.3, 0, dtype=cv2.CV_8U)
         # cv2.imshow('okay',dst)
         # cv2.waitKey(0)
@@ -250,7 +251,7 @@ if __name__ == "__main__":
     # sess, x, op_to_restore = covid_model.export()
     # covid_resp = covid_model.predict(image, sess, x, op_to_restore)
     # print(time.time()-a,covid_resp)
-    chester_model = ChesterAiEvaluator("/home/ronald/xray_corona/flask_backend/model/ChesterAI/")
+    # chester_model = ChesterAiEvaluator("/home/ronald/xray_corona/flask_backend/model/ChesterAI/")
     # chester_model_d=chester_model.export_keras()
     # model=tf.keras.models.load_model(chester_model.model)
     # print(model.summary())
@@ -268,7 +269,28 @@ if __name__ == "__main__":
     # # print(pred)
     # predictions =chester_model.modify_prediction_dict(pred)
     # print(predictions)
-    # image = '/home/ronald/Downloads/kjr-21-e24-g002-l-c.jpg'
-    # unetModel = UNetCTEvaluator("/home/ronald/xray_corona/flask_backend/model/U-Net-CT/")
-    # sess, inpu, output = unetModel.export()
-    # unetModel.predict(image, sess, inpu, output)
+    from aws_functions import upload_to_s3,get_xray_image
+    import uuid
+    user_id=1
+    image_loc = '/home/ronald/Downloads/dicom_00000001_000.dcm'
+    # image_loc='/home/ronald/Downloads/Exported20200425.dcm'
+    # image_loc='/home/ronald/Downloads/ID_0000_AGE_0060_CONTRAST_1_CT.dcm'
+    # image_url='https://xray-corona-ds.s3.ap-south-1.amazonaws.com/dataset/dummy_test/dicom_00000001_000.dcm'
+    image_url='https://xray-corona-ds.s3.ap-south-1.amazonaws.com/dataset/dummy_test/Exported20200425.dcm'
+    image_loc=get_xray_image(image_url)
+    dicom_data=image_loc.read()
+    print('Read')
+    from pydicom import dcmread
+    from pydicom.filebase import DicomBytesIO
+
+    dicom_bytes = DicomBytesIO(dicom_data)
+    dicom_dataset = dcmread(dicom_bytes)
+    image=dicom_dataset
+    image=image.pixel_array
+    unetModel = UNetCTEvaluator("/home/ronald/xray_corona/flask_backend/model/U-Net-CT/")
+    sess, inpu, output = unetModel.export()
+    unet_resp, unet_dict=    unetModel.predict(image, sess, inpu, output)
+    print(unet_dict)
+    filename = f"{user_id}_{uuid.uuid4()}"
+    image_url = upload_to_s3(unet_resp, filename)
+    print(image_url)

@@ -71,7 +71,9 @@ def predict():
             image = np.asarray(bytearray(img_resp.read()), dtype="uint8")
             app.logger.info(image.shape)
         if allowed_image_type['result'] and allowed_image_type['image_type']=='dicom':
-            print('DICOM file')
+            import pydicom
+            from io import BytesIO
+            image=pydicom.dcmread(BytesIO(img_resp.read()),force=True)
         # imghash = image_hash(image)
         # model_output = get_model_output({"image_hash": str(imghash), "model_version": f"{model_type}_{MODEL_VERSION}"})
         # if model_output:

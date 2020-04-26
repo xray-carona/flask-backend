@@ -8,7 +8,7 @@ s3_bucket = s3_resource.Bucket(S3_BUCKET)
 
 def get_xray_image(url):
     urls = url.split('/')
-    folder, file = urls[-2], urls[-1]
+    folder, file = urls[3]+'/'+urls[-2], urls[-1]
     xray = s3_bucket.Object(folder + "/" + file)
     response = xray.get()
     file_stream = response['Body']
